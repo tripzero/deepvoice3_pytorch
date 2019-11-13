@@ -472,13 +472,15 @@ def save_states(global_step, writer, mel_outputs, linear_outputs, attn, mel, y,
             except Exception as e:
                 warn(str(e))
 
-        # Save averaged alignment
-        alignment_dir = join(checkpoint_dir, "alignment_ave")
-        os.makedirs(alignment_dir, exist_ok=True)
-        path = join(alignment_dir, "step{:09d}_layer_alignment.png".format(global_step))
-        alignment = attn.mean(0)[idx].cpu().data.numpy()
-        save_alignment(path, alignment)
-        tag = "averaged_alignment"
+        try:
+            # Save averaged alignment
+            alignment_dir = join(checkpoint_dir, "alignment_ave")
+            os.makedirs(alignment_dir, exist_ok=True)
+            path = join(alignment_dir,
+                        "step{:09d}_alignment.png".format(global_step))
+            alignment = attn.mean(0)[idx].cpu().data.numpy()
+            save_alignment(path, alignment)
+            tag = "averaged_alignment"
 
         try:
             writer.add_image(tag, np.uint8(cm.viridis(
@@ -488,8 +490,9 @@ def save_states(global_step, writer, mel_outputs, linear_outputs, attn, mel, y,
 
     # Predicted mel spectrogram
     if mel_outputs is not None:
-        mel_output = mel_outputs[idx].cpu().data.numpy()
-        mel_output = prepare_spec_image(audio._denormalize(mel_output))
+        try:
+            mel_output = mel_outputs[idx].cpu().data.numpy()
+            mel_output = prepare_spec_image(audio._denormalize(mel_output))
         try:
             writer.add_image("Predicted mel spectrogram",
                              mel_output, global_step)
