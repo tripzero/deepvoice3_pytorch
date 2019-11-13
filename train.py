@@ -470,15 +470,15 @@ def save_states(global_step, writer, mel_outputs, linear_outputs, attn, mel, y,
             except Exception as e:
                 warn(str(e))
 
+        # Save averaged alignment
+        alignment_dir = join(checkpoint_dir, "alignment_ave")
+        os.makedirs(alignment_dir, exist_ok=True)
+        path = join(alignment_dir, "step{:09d}_layer_alignment.png".format(global_step))
+        alignment = attn.mean(0)[idx].cpu().data.numpy()
+        save_alignment(path, alignment)
+        tag = "averaged_alignment"
+
         try:
-            # Save averaged alignment
-            alignment_dir = join(checkpoint_dir, "alignment_ave")
-            os.makedirs(alignment_dir, exist_ok=True)
-            path = join(alignment_dir,
-                        "step{:09d}_alignment.png".format(global_step))
-            alignment = attn.mean(0)[idx].cpu().data.numpy()
-            save_alignment(path, alignment)
-            tag = "averaged_alignment"
             writer.add_image(tag, np.uint8(cm.viridis(
                 np.flip(alignment, 1).T) * 255), global_step)
         except Exception as e:
@@ -486,9 +486,9 @@ def save_states(global_step, writer, mel_outputs, linear_outputs, attn, mel, y,
 
     # Predicted mel spectrogram
     if mel_outputs is not None:
+        mel_output = mel_outputs[idx].cpu().data.numpy()
+        mel_output = prepare_spec_image(audio._denormalize(mel_output))
         try:
-            mel_output = mel_outputs[idx].cpu().data.numpy()
-            mel_output = prepare_spec_image(audio._denormalize(mel_output))
             writer.add_image("Predicted mel spectrogram",
                              mel_output, global_step)
         except Exception as e:
@@ -784,8 +784,6 @@ Please set a larger value for ``max_position`` in hyper parameters.""".format(
                     linear_loss.item()), global_step)
                 writer.add_scalar("linear_l1_loss", float(
                     linear_l1_loss.item()), global_step)
-                writer.add_scalar("linear_binary_div_loss", float(
-                    linear_binary_div.item()), global_step)
             if train_seq2seq and hparams.use_guided_attention:
                 writer.add_scalar("attn_loss", float(
                     attn_loss.item()), global_step)
@@ -1025,8 +1023,7 @@ if __name__ == "__main__":
     # Setup summary writer for tensorboard
     if log_event_path is None:
         if platform.system() == "Windows":
-            log_event_path = "log/run-test" + \
-                str(datetime.now()).replace(" ", "_").replace(":", "_")
+            log_event_path = "log/run-test" + str(datetime.now()).replace(" ", "_").replace(":", "_")
         else:
             log_event_path = "log/run-test" + \
                 str(datetime.now()).replace(" ", "_")
