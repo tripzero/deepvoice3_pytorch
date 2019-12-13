@@ -789,6 +789,8 @@ Please set a larger value for ``max_position`` in hyper parameters.""".format(
                     linear_loss.item()), global_step)
                 writer.add_scalar("linear_l1_loss", float(
                     linear_l1_loss.item()), global_step)
+                writer.add_scalar("linear_binary_div_loss", float(
+                    linear_binary_div.item()), global_step)
             if train_seq2seq and hparams.use_guided_attention:
                 writer.add_scalar("attn_loss", float(
                     attn_loss.item()), global_step)
@@ -1028,7 +1030,8 @@ if __name__ == "__main__":
     # Setup summary writer for tensorboard
     if log_event_path is None:
         if platform.system() == "Windows":
-            log_event_path = "log/run-test" + str(datetime.now()).replace(" ", "_").replace(":", "_")
+            log_event_path = "log/run-test" + \
+                str(datetime.now()).replace(" ", "_").replace(":", "_")
         else:
             log_event_path = "log/run-test" + \
                 str(datetime.now()).replace(" ", "_")
