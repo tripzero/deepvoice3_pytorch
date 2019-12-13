@@ -35,7 +35,13 @@ from hparams import hparams, hparams_debug_string
 from tqdm import tqdm
 
 use_cuda = torch.cuda.is_available()
-device = torch.device("cuda" if use_cuda else "cpu")
+not_cuda_device = "cpu"
+
+if "USE_SYCL" in os.environ:
+    not_cuda_device = "sycl"
+
+device = torch.device("cuda" if use_cuda else not_cuda_device)
+
 _frontend = None  # to be set later
 
 
@@ -53,8 +59,10 @@ def tts(model, text, p=0, speaker_id=None, fast=False):
 
     sequence = np.array(_frontend.text_to_sequence(text, p=p))
     sequence = torch.from_numpy(sequence).unsqueeze(0).long().to(device)
-    text_positions = torch.arange(1, sequence.size(-1) + 1).unsqueeze(0).long().to(device)
-    speaker_ids = None if speaker_id is None else torch.LongTensor([speaker_id]).to(device)
+    text_positions = torch.arange(
+        1, sequence.size(-1) + 1).unsqueeze(0).long().to(device)
+    speaker_ids = None if speaker_id is None else torch.LongTensor(
+        [speaker_id]).to(device)
 
     # Greedy decoding
     with torch.no_grad():
@@ -162,7 +170,8 @@ Your browser does not support the audio element.
                              hparams.builder, name, basename(dst_wav_path),
                              hparams.builder, name, basename(dst_alignment_path)))
             else:
-                print(idx, ": {}\n ({} chars, {} words)".format(text, len(text), len(words)))
+                print(idx, ": {}\n ({} chars, {} words)".format(
+                    text, len(text), len(words)))
 
     print("Finished! Check out {} for generated audio samples.".format(dst_dir))
     sys.exit(0)

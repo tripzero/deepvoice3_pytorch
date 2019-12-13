@@ -110,7 +110,8 @@ class TextDataSource(FileDataSource):
         self.multi_speaker = len(l) == 5
         texts = list(map(lambda l: l.decode("utf-8").split("|")[3], lines))
         if self.multi_speaker:
-            speaker_ids = list(map(lambda l: int(l.decode("utf-8").split("|")[-1]), lines))
+            speaker_ids = list(
+                map(lambda l: int(l.decode("utf-8").split("|")[-1]), lines))
             # Filter by speaker_id
             # using multi-speaker dataset as a single speaker dataset
             if self.speaker_id is not None:
@@ -131,7 +132,8 @@ class TextDataSource(FileDataSource):
         global _frontend
         if _frontend is None:
             _frontend = getattr(frontend, hparams.frontend)
-        seq = _frontend.text_to_sequence(text, p=hparams.replace_pronunciation_prob)
+        seq = _frontend.text_to_sequence(
+            text, p=hparams.replace_pronunciation_prob)
 
         if platform.system() == "Windows":
             if hasattr(hparams, 'gc_probability'):
@@ -163,11 +165,13 @@ class _NPYDataSource(FileDataSource):
         self.frame_lengths = list(
             map(lambda l: int(l.decode("utf-8").split("|")[2]), lines))
 
-        paths = list(map(lambda l: l.decode("utf-8").split("|")[self.col], lines))
+        paths = list(map(lambda l: l.decode(
+            "utf-8").split("|")[self.col], lines))
         paths = list(map(lambda f: join(self.data_root, f), paths))
 
         if multi_speaker and self.speaker_id is not None:
-            speaker_ids = list(map(lambda l: int(l.decode("utf-8").split("|")[-1]), lines))
+            speaker_ids = list(
+                map(lambda l: int(l.decode("utf-8").split("|")[-1]), lines))
             # Filter by speaker_id
             # using multi-speaker dataset as a single speaker dataset
             indices = np.array(speaker_ids) == self.speaker_id
@@ -202,7 +206,8 @@ class PartialyRandomizedSimilarTimeLengthSampler(Sampler):
 
     def __init__(self, lengths, batch_size=16, batch_group_size=None,
                  permutate=True):
-        self.lengths, self.sorted_indices = torch.sort(torch.LongTensor(lengths))
+        self.lengths, self.sorted_indices = torch.sort(
+            torch.LongTensor(lengths))
         self.batch_size = batch_size
         if batch_group_size is None:
             batch_group_size = min(batch_size * 32, len(self.lengths))
@@ -226,7 +231,8 @@ class PartialyRandomizedSimilarTimeLengthSampler(Sampler):
         if self.permutate:
             perm = np.arange(len(indices[:e]) // self.batch_size)
             random.shuffle(perm)
-            indices[:e] = indices[:e].view(-1, self.batch_size)[perm, :].view(-1)
+            indices[:e] = indices[:e].view(-1,
+                                           self.batch_size)[perm, :].view(-1)
 
         # Handle last elements
         s += batch_group_size
@@ -369,7 +375,8 @@ def save_alignment(path, attn):
 
 def prepare_spec_image(spectrogram):
     # [0, 1]
-    spectrogram = (spectrogram - np.min(spectrogram)) / (np.max(spectrogram) - np.min(spectrogram))
+    spectrogram = (spectrogram - np.min(spectrogram)) / \
+        (np.max(spectrogram) - np.min(spectrogram))
     spectrogram = np.flip(spectrogram, axis=1)  # flip against freq axis
     return np.uint8(cm.magma(spectrogram.T) * 255)
 
@@ -397,7 +404,8 @@ def eval_model(global_step, writer, device, model, checkpoint_dir, ismultispeake
     # hard coded
     speaker_ids = [0, 1, 10] if ismultispeaker else [None]
     for speaker_id in speaker_ids:
-        speaker_str = "multispeaker{}".format(speaker_id) if speaker_id is not None else "single"
+        speaker_str = "multispeaker{}".format(
+            speaker_id) if speaker_id is not None else "single"
 
         for idx, text in enumerate(texts):
             signal, alignment, _, mel = synthesis.tts(
@@ -410,7 +418,8 @@ def eval_model(global_step, writer, device, model, checkpoint_dir, ismultispeake
             save_alignment(path, alignment)
             tag = "eval_averaged_alignment_{}_{}".format(idx, speaker_str)
             try:
-                writer.add_image(tag, np.uint8(cm.viridis(np.flip(alignment, 1).T) * 255), global_step)
+                writer.add_image(tag, np.uint8(cm.viridis(
+                    np.flip(alignment, 1).T) * 255), global_step)
             except Exception as e:
                 warn(str(e))
 
@@ -561,9 +570,11 @@ def spec_loss(y_hat, y, mask, priority_bin=None, priority_w=0):
         if w > 0:
             priority_loss = w * masked_l1(
                 y_hat[:, :, :priority_bin], y[:, :, :priority_bin], mask=mask) \
-                + (1 - w) * l1(y_hat[:, :, :priority_bin], y[:, :, :priority_bin])
+                + (1 - w) * l1(y_hat[:, :, :priority_bin],
+                               y[:, :, :priority_bin])
         else:
-            priority_loss = l1(y_hat[:, :, :priority_bin], y[:, :, :priority_bin])
+            priority_loss = l1(
+                y_hat[:, :, :priority_bin], y[:, :, :priority_bin])
         l1_loss = (1 - priority_w) * l1_loss + priority_w * priority_loss
 
     # Binary divergence loss
@@ -713,7 +724,8 @@ Please set a larger value for ``max_position`` in hyper parameters.""".format(
 
             # linear:
             if train_postnet:
-                n_priority_freq = int(hparams.priority_freq / (hparams.sample_rate * 0.5) * linear_dim)
+                n_priority_freq = int(
+                    hparams.priority_freq / (hparams.sample_rate * 0.5) * linear_dim)
                 linear_l1_loss, linear_binary_div = spec_loss(
                     linear_outputs[:, :-r, :], y[:, r:, :], target_mask,
                     priority_bin=n_priority_freq,
@@ -759,16 +771,24 @@ Please set a larger value for ``max_position`` in hyper parameters.""".format(
             # Logs
             writer.add_scalar("loss", float(loss.item()), global_step)
             if train_seq2seq:
-                writer.add_scalar("done_loss", float(done_loss.item()), global_step)
-                writer.add_scalar("mel loss", float(mel_loss.item()), global_step)
-                writer.add_scalar("mel_l1_loss", float(mel_l1_loss.item()), global_step)
-                writer.add_scalar("mel_binary_div_loss", float(mel_binary_div.item()), global_step)
+                writer.add_scalar("done_loss", float(
+                    done_loss.item()), global_step)
+                writer.add_scalar("mel loss", float(
+                    mel_loss.item()), global_step)
+                writer.add_scalar("mel_l1_loss", float(
+                    mel_l1_loss.item()), global_step)
+                writer.add_scalar("mel_binary_div_loss", float(
+                    mel_binary_div.item()), global_step)
             if train_postnet:
-                writer.add_scalar("linear_loss", float(linear_loss.item()), global_step)
-                writer.add_scalar("linear_l1_loss", float(linear_l1_loss.item()), global_step)
-                writer.add_scalar("linear_binary_div_loss", float(linear_binary_div.item()), global_step)
+                writer.add_scalar("linear_loss", float(
+                    linear_loss.item()), global_step)
+                writer.add_scalar("linear_l1_loss", float(
+                    linear_l1_loss.item()), global_step)
+                writer.add_scalar("linear_binary_div_loss", float(
+                    linear_binary_div.item()), global_step)
             if train_seq2seq and hparams.use_guided_attention:
-                writer.add_scalar("attn_loss", float(attn_loss.item()), global_step)
+                writer.add_scalar("attn_loss", float(
+                    attn_loss.item()), global_step)
             if clip_thresh > 0:
                 writer.add_scalar("gradient norm", grad_norm, global_step)
             writer.add_scalar("learning rate", current_lr, global_step)
@@ -939,7 +959,8 @@ if __name__ == "__main__":
     # Preventing Windows specific error such as MemoryError
     # Also reduces the occurrence of THAllocator.c 0x05 error in Widows build of PyTorch
     if platform.system() == "Windows":
-        print(" [!] Windows Detected - IF THAllocator.c 0x05 error occurs SET num_workers to 1")
+        print(
+            " [!] Windows Detected - IF THAllocator.c 0x05 error occurs SET num_workers to 1")
 
     assert hparams.name == "deepvoice3"
     print(hparams_debug_string())
@@ -965,7 +986,12 @@ if __name__ == "__main__":
         num_workers=hparams.num_workers, sampler=sampler,
         collate_fn=collate_fn, pin_memory=hparams.pin_memory)
 
-    device = torch.device("cuda" if use_cuda else "cpu")
+    not_cuda_device = "cpu"
+
+    if "USE_SYCL" in os.environ:
+        not_cuda_device = "sycl"
+
+    device = torch.device("cuda" if use_cuda else not_cuda_device)
 
     # Model
     model = build_model().to(device)
@@ -981,10 +1007,12 @@ if __name__ == "__main__":
 
     # Load checkpoints
     if checkpoint_postnet_path is not None:
-        load_checkpoint(checkpoint_postnet_path, model.postnet, optimizer, reset_optimizer)
+        load_checkpoint(checkpoint_postnet_path, model.postnet,
+                        optimizer, reset_optimizer)
 
     if checkpoint_seq2seq_path is not None:
-        load_checkpoint(checkpoint_seq2seq_path, model.seq2seq, optimizer, reset_optimizer)
+        load_checkpoint(checkpoint_seq2seq_path, model.seq2seq,
+                        optimizer, reset_optimizer)
 
     if checkpoint_path is not None:
         load_checkpoint(checkpoint_path, model, optimizer, reset_optimizer)
@@ -997,9 +1025,11 @@ if __name__ == "__main__":
     # Setup summary writer for tensorboard
     if log_event_path is None:
         if platform.system() == "Windows":
-            log_event_path = "log/run-test" + str(datetime.now()).replace(" ", "_").replace(":", "_")
+            log_event_path = "log/run-test" + \
+                str(datetime.now()).replace(" ", "_").replace(":", "_")
         else:
-            log_event_path = "log/run-test" + str(datetime.now()).replace(" ", "_")
+            log_event_path = "log/run-test" + \
+                str(datetime.now()).replace(" ", "_")
     print("Log event path: {}".format(log_event_path))
     writer = SummaryWriter(log_event_path)
 
