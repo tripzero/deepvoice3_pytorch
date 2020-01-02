@@ -38,6 +38,7 @@ use_cuda = torch.cuda.is_available()
 not_cuda_device = "cpu"
 
 if "USE_SYCL" in os.environ:
+    print("Trying to use sycl device")
     not_cuda_device = "sycl"
 
 device = torch.device("cuda" if use_cuda else not_cuda_device)
