@@ -94,6 +94,7 @@ def plot_alignment(alignment, path, info=None):
 
 
 class TextDataSource(FileDataSource):
+
     def __init__(self, data_root, speaker_id=None):
         self.data_root = data_root
         self.speaker_ids = None
@@ -149,6 +150,7 @@ class TextDataSource(FileDataSource):
 
 
 class _NPYDataSource(FileDataSource):
+
     def __init__(self, data_root, col, speaker_id=None):
         self.data_root = data_root
         self.col = col
@@ -187,11 +189,13 @@ class _NPYDataSource(FileDataSource):
 
 
 class MelSpecDataSource(_NPYDataSource):
+
     def __init__(self, data_root, speaker_id=None):
         super(MelSpecDataSource, self).__init__(data_root, 1, speaker_id)
 
 
 class LinearSpecDataSource(_NPYDataSource):
+
     def __init__(self, data_root, speaker_id=None):
         super(LinearSpecDataSource, self).__init__(data_root, 0, speaker_id)
 
@@ -246,6 +250,7 @@ class PartialyRandomizedSimilarTimeLengthSampler(Sampler):
 
 
 class PyTorchDataset(object):
+
     def __init__(self, X, Mel, Y):
         self.X = X
         self.Mel = Mel
@@ -278,6 +283,7 @@ def sequence_mask(sequence_length, max_len=None):
 
 
 class MaskedL1Loss(nn.Module):
+
     def __init__(self):
         super(MaskedL1Loss, self).__init__()
         self.criterion = nn.L1Loss(reduction="sum")
@@ -472,15 +478,14 @@ def save_states(global_step, writer, mel_outputs, linear_outputs, attn, mel, y,
             except Exception as e:
                 warn(str(e))
 
-        try:
-            # Save averaged alignment
-            alignment_dir = join(checkpoint_dir, "alignment_ave")
-            os.makedirs(alignment_dir, exist_ok=True)
-            path = join(alignment_dir,
-                        "step{:09d}_alignment.png".format(global_step))
-            alignment = attn.mean(0)[idx].cpu().data.numpy()
-            save_alignment(path, alignment)
-            tag = "averaged_alignment"
+        # Save averaged alignment
+        alignment_dir = join(checkpoint_dir, "alignment_ave")
+        os.makedirs(alignment_dir, exist_ok=True)
+        path = join(alignment_dir,
+                    "step{:09d}_alignment.png".format(global_step))
+        alignment = attn.mean(0)[idx].cpu().data.numpy()
+        save_alignment(path, alignment)
+        tag = "averaged_alignment"
 
         try:
             writer.add_image(tag, np.uint8(cm.viridis(
@@ -490,9 +495,9 @@ def save_states(global_step, writer, mel_outputs, linear_outputs, attn, mel, y,
 
     # Predicted mel spectrogram
     if mel_outputs is not None:
-        try:
-            mel_output = mel_outputs[idx].cpu().data.numpy()
-            mel_output = prepare_spec_image(audio._denormalize(mel_output))
+
+        mel_output = mel_outputs[idx].cpu().data.numpy()
+        mel_output = prepare_spec_image(audio._denormalize(mel_output))
         try:
             writer.add_image("Predicted mel spectrogram",
                              mel_output, global_step)
@@ -962,7 +967,8 @@ if __name__ == "__main__":
     hparams.parse(args["--hparams"])
 
     # Preventing Windows specific error such as MemoryError
-    # Also reduces the occurrence of THAllocator.c 0x05 error in Widows build of PyTorch
+    # Also reduces the occurrence of THAllocator.c 0x05 error in Widows build
+    # of PyTorch
     if platform.system() == "Windows":
         print(
             " [!] Windows Detected - IF THAllocator.c 0x05 error occurs SET num_workers to 1")
