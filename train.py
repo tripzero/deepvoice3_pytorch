@@ -64,6 +64,10 @@ if use_cuda:
 _frontend = None  # to be set later
 
 
+class GlobalDevice:
+    device = None
+
+
 def _pad(seq, max_len, constant_values=0):
     return np.pad(seq, (0, max_len - len(seq)),
                   mode='constant', constant_values=constant_values)
@@ -277,6 +281,8 @@ def sequence_mask(sequence_length, max_len=None):
     seq_range_expand = seq_range.unsqueeze(0).expand(batch_size, max_len)
     if sequence_length.is_cuda:
         seq_range_expand = seq_range_expand.cuda()
+    else:
+        seq_range_expand = seq_range_expand.to(GlobalDevice.device)
     seq_length_expand = sequence_length.unsqueeze(1) \
         .expand_as(seq_range_expand)
     return (seq_range_expand < seq_length_expand).float()
@@ -1003,6 +1009,8 @@ if __name__ == "__main__":
         not_cuda_device = "sycl"
 
     device = torch.device("cuda" if use_cuda else not_cuda_device)
+
+    GlobalDevice.device = device
 
     # Model
     model = build_model().to(device)
